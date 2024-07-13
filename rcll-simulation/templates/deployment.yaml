@@ -1,0 +1,363 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: refbox
+  labels:
+    app: refbox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: refbox
+  template:
+    metadata:
+      labels:
+        app: refbox
+    spec:
+      imagePullSecrets:
+        - name: ps-grips
+      volumes:
+        - name: simulator-config-volume
+          configMap:
+            name: simulator-config
+        - name: refbox-comm-config-volume
+          configMap:
+            name: refbox-comm-config
+        - name: refbox-team-config-volume
+          configMap:
+            name: refbox-team-config
+        - name: refbox-mps-config-volume
+          configMap:
+            name: refbox-mps-config
+        - name: refbox-game-config-volume
+          configMap:
+            name: refbox-game-config
+        - name: mosquitto-config-volume
+          configMap:
+            name: mosquitto-config
+      containers:
+        - name: refbox
+          image: quay.io/robocup-logistics/rcll-refbox:master
+          #image: registry.gitlab.com/grips_robocup/team_server/refbox:mqtt
+          command:
+            - llsf-refbox
+          ports:
+            - containerPort: 1234
+            - containerPort: 4441
+            - containerPort: 4442
+            - containerPort: 4444
+            - containerPort: 4445
+            - containerPort: 4446
+            - containerPort: 4447
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: refbox-comm-config-volume
+              mountPath: /etc/rcll-refbox/comm/default_comm.yaml
+              subPath: config.yaml
+            - name: refbox-team-config-volume
+              mountPath: /etc/rcll-refbox/team/default_team.yaml
+              subPath: config.yaml
+            - name: refbox-mps-config-volume
+              mountPath: /etc/rcll-refbox/mps/default_mps.yaml
+              subPath: config.yaml
+            - name: refbox-game-config-volume
+              mountPath: /etc/rcll-refbox/game/default_game.yaml
+              subPath: config.yaml
+        - name: simulator
+          #image: quay.io/robocup-logistics/rcll-simulator:mqtt-test
+          #image: registry.gitlab.com/grips_robocup/logistics/simulator:mqttk8
+          #image: registry.gitlab.com/grips_robocup/logistics/simulator:mqttk82
+          image: registry.gitlab.com/grips_robocup/logistics/simulator:mqttk8s2
+          workingDir: /simulator
+          command:
+            - "/bin/bash"
+          args:
+            - "-c"
+            - "dotnet run --framework net6.0 -cfg cfg/config.yaml"
+          ports:
+            - containerPort: 8000
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: simulator-config-volume
+              mountPath: /simulator/cfg/config.yaml
+              subPath: config.yaml
+        - name: mosquitto
+          image: docker.io/library/eclipse-mosquitto:latest
+          workingDir: /simulator
+          ports:
+            - containerPort: 1883
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: mosquitto-config-volume
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: refbox-frontend
+  labels:
+    app: refbox-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: refbox-frontend
+  template:
+    metadata:
+      labels:
+        app: refbox-frontend
+    spec:
+      imagePullSecrets:
+        - name: ps-grips
+      containers:
+        - name: refbox
+          #image: quay.io/robocup-logistics/rcll-refbox-frontend:master
+          image: registry.gitlab.com/grips_robocup/logistics/refbox_gui:k8s
+          command:
+            - "httpd-foreground"
+          ports:
+            - containerPort: 80
+          imagePullPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simulator-frontend
+  labels:
+    app: simulator-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simulator-frontend
+  template:
+    metadata:
+      labels:
+        app: simulator-frontend
+    spec:
+      imagePullSecrets:
+        - name: ps-grips #since we pull from gitlab registry!
+      containers:
+        - name: simulator-frontend
+          #image: ghcr.io/pkohout/rcll-simulator/frontend:master
+          image: registry.gitlab.com/grips_robocup/logistics/rcll-simulator-frontend:test
+          #image: quay.io/robocup-logistics/rcll-simulator-frontend:mqtt-test
+          ports:
+            - containerPort: 4200
+          command:
+            - "/bin/bash"
+          args:
+            - "-c"
+            - "sed -i 's@<base href=\"/\">@<base href=\"/simulator/\">@g' /usr/share/nginx/html/index.html && nginx -g 'daemon off;'"
+          imagePullPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cyan
+  labels:
+    app: cyan
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cyan
+  template:
+    metadata:
+      labels:
+        app: cyan
+    spec:
+      imagePullSecrets:
+        - name: ps-grips
+      containers:
+        - name: grips-team-server
+          image: registry.gitlab.com/grips_robocup/logistics/team_server:master
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 2016
+            - containerPort: 4444
+            - containerPort: 4441
+
+        - name: grips-db
+          image: mysql
+          env:
+            - name: MYSQL_DATABASE
+              value: grips
+            - name: MYSQL_ROOT_PASSWORD
+              value: grips
+          imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cyan-team
+spec:
+  selector:
+    app: cyan
+  ports:
+    - protocol: TCP
+      name: grips-port
+      port: 2016
+      targetPort: 2016
+    - protocol: UDP
+      name: c-refbox-privat
+      port: 4441
+      targetPort: 4441
+    - protocol: UDP
+      name: c-refbox-public
+      port: 4444
+      targetPort: 4444
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: refbox
+spec:
+  selector:
+    app: refbox
+  ports:
+    - protocol: UDP
+      name: incoming-1
+      port: 4446
+      targetPort: 4446
+    - protocol: UDP
+      name: incoming-2
+      port: 4442
+      targetPort: 4442
+    - protocol: UDP
+      name: incoming-3
+      port: 4445
+      targetPort: 4444
+    - protocol: UDP
+      name: incoming-6
+      port: 4447
+      targetPort: 4447
+    - protocol: UDP
+      name: incoming-7
+      port: 4441
+      targetPort: 4441
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: refbox-gui-service
+spec:
+  selector:
+    app: refbox
+  ports:
+    - protocol: TCP
+      port: 1234
+      targetPort: 1234
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mqtt-service
+spec:
+  selector:
+    app: refbox
+  ports:
+    - protocol: TCP
+      port: 1884
+      targetPort: 1884
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: refbox-frontend-service
+spec:
+  selector:
+    app: refbox-frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: simulator-frontend-service
+spec:
+  selector:
+    app: simulator-frontend
+  ports:
+    - protocol: TCP
+      port: 4200
+      targetPort: 4200
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: simulator-backend-service
+spec:
+  selector:
+    app: refbox
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-refbox
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /refbox/?(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: refbox-frontend-service
+                port:
+                  number: 80
+          - path: /ws/
+            pathType: Prefix
+            backend:
+              service:
+                name: refbox-gui-service
+                port:
+                  number: 1234
+          - path: /mqtt-ws/
+            pathType: Prefix
+            backend:
+              service:
+                name: mqtt-service
+                port:
+                  number: 1884
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-simulator
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    #nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+    #nginx.ingress.kubernetes.io/affinity: "cookie"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /simulator/api/(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: simulator-backend-service
+                port:
+                  number: 8000
+          - path: /simulator/(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: simulator-frontend-service
+                port:
+                  number: 4200

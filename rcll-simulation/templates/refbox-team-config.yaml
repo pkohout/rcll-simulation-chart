@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: refbox-team-config
+data:
+  config.yaml: |
+    llsfrb:
+      game:
+        teams: [Carologistics, GRIPS]
+        crypto-keys:
+          Carologistics: randomkey
+          GRIPS: randomkey
