@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sim-controller
+  labels:
+    app: sim-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sim-controller
+  template:
+    metadata:
+      labels:
+        app: sim-controller
+    spec:
+      volumes:
+        - name: k8s-config
+          configMap:
+            name: k8s-config
+            defaultMode: 420
+      containers:
+        - name: sim-controller
+          env:
+            - name: K8S_CONFIG
+              value: /k8s/k8s.yaml
+          #image: quay.io/robocup-logistics/rcll-refbox-frontend:master
+          image: ghcr.io/pkohout/rcll-sim-controller/sim-controller:main
+          ports:
+            - containerPort: 5000
+          imagePullPolicy: Always
+          volumeMounts:
+            - mountPath: /k8s
+              name: k8s-config
