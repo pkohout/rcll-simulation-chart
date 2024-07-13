@@ -11,4 +11,15 @@ entries:
     urls:
     - https://github.com/pkohout/rcll-simulation-chart/releases/download/rcll-simulation-0.1.0/rcll-simulation-0.1.0.tgz
     version: 0.1.0
-generated: "2024-07-13T11:49:26.220411495Z"
+  sim-controller:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-07-13T17:58:03.579884087Z"
+    description: A Helm chart for Kubernetes
+    digest: 20051a08d230b309468b4111c461f4025e6968a7863f3a9851c092839aec41bc
+    name: sim-controller
+    type: application
+    urls:
+    - https://github.com/pkohout/rcll-simulation-chart/releases/download/sim-controller-0.1.0/sim-controller-0.1.0.tgz
+    version: 0.1.0
+generated: "2024-07-13T17:58:03.579956983Z"
