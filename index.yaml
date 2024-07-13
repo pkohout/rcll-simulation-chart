@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  rcll-simulation:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-07-13T11:49:26.220401646Z"
+    description: A Helm chart for Kubernetes
+    digest: d2421dad2e25801495a9a5322726119acd5aa1491d236375b03026ab21bfcd4d
+    name: rcll-simulation
+    type: application
+    urls:
+    - https://github.com/pkohout/rcll-simulation-chart/releases/download/rcll-simulation-0.1.0/rcll-simulation-0.1.0.tgz
+    version: 0.1.0
+generated: "2024-07-13T11:49:26.220411495Z"
