@@ -37,7 +37,7 @@ spec:
             name: mosquitto-config
       containers:
         - name: refbox
-          image: quay.io/robocup-logistics/rcll-refbox:master
+          image: {{.Values.refbox.image}}
           #image: registry.gitlab.com/grips_robocup/team_server/refbox:mqtt
           command:
             - llsf-refbox
@@ -67,7 +67,7 @@ spec:
           #image: quay.io/robocup-logistics/rcll-simulator:mqtt-test
           #image: registry.gitlab.com/grips_robocup/logistics/simulator:mqttk8
           #image: registry.gitlab.com/grips_robocup/logistics/simulator:mqttk82
-          image: registry.gitlab.com/grips_robocup/logistics/simulator:mqttk8s2
+          image: {{.Values.simulator.image}}
           workingDir: /simulator
           command:
             - "/bin/bash"
@@ -113,7 +113,7 @@ spec:
       containers:
         - name: refbox
           #image: quay.io/robocup-logistics/rcll-refbox-frontend:master
-          image: registry.gitlab.com/grips_robocup/logistics/refbox_gui:k8s
+          image: {{.Values.refbox.frontent_image}}
           command:
             - "httpd-foreground"
           ports:
@@ -141,7 +141,7 @@ spec:
       containers:
         - name: simulator-frontend
           #image: ghcr.io/pkohout/rcll-simulator/frontend:master
-          image: registry.gitlab.com/grips_robocup/logistics/rcll-simulator-frontend:test
+          image: {{.Values.simulator.frontend_image}}
           #image: quay.io/robocup-logistics/rcll-simulator-frontend:mqtt-test
           ports:
             - containerPort: 4200
@@ -151,66 +151,6 @@ spec:
             - "-c"
             - "sed -i 's@<base href=\"/\">@<base href=\"/simulator/\">@g' /usr/share/nginx/html/index.html && nginx -g 'daemon off;'"
           imagePullPolicy: Always
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: cyan
-  labels:
-    app: cyan
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: cyan
-  template:
-    metadata:
-      labels:
-        app: cyan
-    spec:
-      imagePullSecrets:
-        - name: ps-grips
-      containers:
-        - name: grips-team-server
-          image: registry.gitlab.com/grips_robocup/logistics/team_server:master
-          env:
-            - name: SPRING_PROFILES_ACTIVE
-              value: k8s
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 2016
-            - containerPort: 4444
-            - containerPort: 4441
-
-        - name: grips-db
-          image: mysql
-          env:
-            - name: MYSQL_DATABASE
-              value: grips
-            - name: MYSQL_ROOT_PASSWORD
-              value: grips
-          imagePullPolicy: Always
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: cyan-team
-spec:
-  selector:
-    app: cyan
-  ports:
-    - protocol: TCP
-      name: grips-port
-      port: 2016
-      targetPort: 2016
-    - protocol: UDP
-      name: c-refbox-privat
-      port: 4441
-      targetPort: 4441
-    - protocol: UDP
-      name: c-refbox-public
-      port: 4444
-      targetPort: 4444
 ---
 apiVersion: v1
 kind: Service
@@ -300,64 +240,3 @@ spec:
     - protocol: TCP
       port: 8000
       targetPort: 8000
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: ingress-refbox
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
-spec:
-  ingressClassName: nginx
-  rules:
-    - http:
-        paths:
-          - path: /refbox/?(.*)
-            pathType: Prefix
-            backend:
-              service:
-                name: refbox-frontend-service
-                port:
-                  number: 80
-          - path: /ws/
-            pathType: Prefix
-            backend:
-              service:
-                name: refbox-gui-service
-                port:
-                  number: 1234
-          - path: /mqtt-ws/
-            pathType: Prefix
-            backend:
-              service:
-                name: mqtt-service
-                port:
-                  number: 1884
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: ingress-simulator
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
-    #nginx.ingress.kubernetes.io/affinity-mode: "persistent"
-    #nginx.ingress.kubernetes.io/affinity: "cookie"
-spec:
-  ingressClassName: nginx
-  rules:
-    - http:
-        paths:
-          - path: /simulator/api/(.*)
-            pathType: Prefix
-            backend:
-              service:
-                name: simulator-backend-service
-                port:
-                  number: 8000
-          - path: /simulator/(.*)
-            pathType: Prefix
-            backend:
-              service:
-                name: simulator-frontend-service
-                port:
-                  number: 4200
