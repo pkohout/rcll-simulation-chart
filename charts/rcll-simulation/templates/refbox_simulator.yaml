@@ -15,7 +15,7 @@ spec:
         app: refbox
     spec:
       imagePullSecrets:
-        - name: ps-grips
+        - name: ps-cyan
       volumes:
         - name: simulator-config-volume
           configMap:
@@ -38,7 +38,6 @@ spec:
       containers:
         - name: refbox
           image: {{.Values.refbox.image}}
-          #image: registry.gitlab.com/grips_robocup/team_server/refbox:mqtt
           command:
             - llsf-refbox
           ports:
@@ -64,9 +63,6 @@ spec:
               mountPath: /etc/rcll-refbox/game/default_game.yaml
               subPath: config.yaml
         - name: simulator
-          #image: quay.io/robocup-logistics/rcll-simulator:mqtt-test
-          #image: registry.gitlab.com/grips_robocup/logistics/simulator:mqttk8
-          #image: registry.gitlab.com/grips_robocup/logistics/simulator:mqttk82
           image: {{.Values.simulator.image}}
           workingDir: /simulator
           command:
@@ -86,6 +82,7 @@ spec:
           workingDir: /simulator
           ports:
             - containerPort: 1883
+            - containerPort: 1884
           imagePullPolicy: Always
           volumeMounts:
             - name: mosquitto-config-volume
@@ -109,7 +106,7 @@ spec:
         app: refbox-frontend
     spec:
       imagePullSecrets:
-        - name: ps-grips
+        - name: ps-cyan
       containers:
         - name: refbox
           #image: quay.io/robocup-logistics/rcll-refbox-frontend:master
@@ -137,7 +134,7 @@ spec:
         app: simulator-frontend
     spec:
       imagePullSecrets:
-        - name: ps-grips #since we pull from gitlab registry!
+        - name: ps-cyan #since we pull from gitlab registry!
       containers:
         - name: simulator-frontend
           #image: ghcr.io/pkohout/rcll-simulator/frontend:master
