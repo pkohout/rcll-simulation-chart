@@ -2,5 +2,5 @@ refbox:
   image: quay.io/robocup-logistics/rcll-refbox:master
   frontent_image: registry.gitlab.com/grips_robocup/logistics/refbox_gui:k8s
 simulator:
-  image: registry.gitlab.com/grips_robocup/logistics/simulator:mqttk8s2
+  image: ghcr.io/pkohout/rcll-simulator/simulator:mqtt-test
   frontend_image: registry.gitlab.com/grips_robocup/logistics/rcll-simulator-frontend:test

@@ -1,3 +1,4 @@
+{{if .Values.magenta}}
 ---
 apiVersion: v1
 kind: Secret
@@ -59,6 +60,7 @@ spec:
       name: {{ $port.name }}
       port: {{ $port.port }}
       targetPort: {{ $port.port }}
+{{end}}
 {{end}}
 {{end}}
 {{end}}
